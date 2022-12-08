@@ -20,8 +20,8 @@ from sflserial.version import SFL_PLUGIN_VERSION
 
 class SFLSerialNumberPlugin(SettingsMixin, ValidationMixin, InvenTreePlugin):
     """Serial number generation and validation plugin.
-    
-    Serial numbers should be formatted like:
+
+    Serial numbers should be formatted in hexidecimal, like:
 
     - 12B
     - AZA
@@ -32,7 +32,7 @@ class SFLSerialNumberPlugin(SettingsMixin, ValidationMixin, InvenTreePlugin):
     - ...
     - ZZZ
     - AAAA
-    
+
     """
 
     # Plugin metadata
@@ -51,7 +51,7 @@ class SFLSerialNumberPlugin(SettingsMixin, ValidationMixin, InvenTreePlugin):
 
     def valid_chars(self):
         """Return a list of characters which can be used in this serial number schema:
-        
+
         - Allow uppercase alphanumeric characters
         - Exclude '0' and 'O' characters
 
@@ -65,17 +65,17 @@ class SFLSerialNumberPlugin(SettingsMixin, ValidationMixin, InvenTreePlugin):
 
         for c in disallowed:
             idx = allowed.index(c)
-            allowed = allowed[:idx] + allowed[idx+1:]
-        
+            allowed = allowed[:idx] + allowed[idx + 1:]
+
         return allowed
 
     def validate_serial_number(self, serial: str):
         """Serial number validation routine:
-        
+
         - Must be at least three characters long
         - Must only consist of characters A-Z
         """
-        
+
         if len(serial) < 3:
             raise ValidationError("Serial number must be at least three characters")
 
@@ -84,16 +84,16 @@ class SFLSerialNumberPlugin(SettingsMixin, ValidationMixin, InvenTreePlugin):
         for c in serial:
             if c not in valid:
                 raise ValidationError(f"Serial number contains prohibited character: {c}")
-        
+
     def convert_serial_to_int(self, serial: str):
-        """Convert a serial number (string) to an integer representation.    
+        """Convert a serial number (string) to an integer representation.
         Iterate through each character, and if we find a "weird" character, simply return None
         """
-
+        """
         num = 0
 
         valid = self.valid_chars()
-        N = len(valid)
+        N = len(valid)     
 
         # Reverse iterate through the serial number string
         for idx, c in enumerate(serial[::-1]):
@@ -106,7 +106,9 @@ class SFLSerialNumberPlugin(SettingsMixin, ValidationMixin, InvenTreePlugin):
             c_int *= (N ** idx)
 
             num += c_int
-        
+        """
+        num = int(serial, base=16)
+
         return num
 
     def increment_serial_number(self, serial: str):
@@ -121,7 +123,7 @@ class SFLSerialNumberPlugin(SettingsMixin, ValidationMixin, InvenTreePlugin):
         DQX -> DQY
         ZZZ -> AAAA
         """
-
+        """
         valid = self.valid_chars()
         N = len(valid)
 
@@ -136,7 +138,7 @@ class SFLSerialNumberPlugin(SettingsMixin, ValidationMixin, InvenTreePlugin):
             # If any character is invalid, return immediately
             if c not in valid:
                 return None
-            
+
             idx = valid.index(c)
 
             if not rollover:
@@ -145,11 +147,38 @@ class SFLSerialNumberPlugin(SettingsMixin, ValidationMixin, InvenTreePlugin):
                 else:
                     rollover = True
                     idx += 1
-            
+
             output = valid[idx] + output
-        
+
         # If we get to the end of the sequence without incrementing, add a new character
         if not rollover:
             output = valid[0] + output
-        
-        return output
+        """
+        # Iterate to next serial number
+        next_num = int(serial, base=16) + 1
+        output = hex(next_num)
+        output = output[2:]
+
+        # Validate
+        valid = self.valid_chars()
+        invalid_flag = 0
+        valid_flag = 0
+
+        while ~valid_flag:
+            for c in output:
+                # if a char is not in the valid character list, it is not valid we need to go to the next serial number
+                if c not in valid:
+                    invalid_flag = 1
+
+            if invalid_flag == 1:
+                next_num = int(output, base=16) + 1
+                output = hex(next_num)
+                output = output[2:]
+                break
+            else:
+
+                valid_flag = 1
+        return output.upper()
+
+
+
