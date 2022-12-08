@@ -107,9 +107,11 @@ class SFLSerialNumberPlugin(SettingsMixin, ValidationMixin, InvenTreePlugin):
 
             num += c_int
         """
-        num = int(serial, base=16)
+        num = int(serial, base=36)
 
         return num
+
+
 
     def increment_serial_number(self, serial: str):
         """Find the next serial number in the required sequence
@@ -123,62 +125,38 @@ class SFLSerialNumberPlugin(SettingsMixin, ValidationMixin, InvenTreePlugin):
         DQX -> DQY
         ZZZ -> AAAA
         """
-        """
-        valid = self.valid_chars()
-        N = len(valid)
 
-        if serial in [None, '']:
-            # Provide an initial condition
-            return valid[0] * 3
+        def base36encode(number, alphabet='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'):
+            """Converts an integer to a base36 string."""
 
-        output = ''
-        rollover = False
+            base36 = ''
 
-        for c in serial[::-1]:
-            # If any character is invalid, return immediately
-            if c not in valid:
-                return None
+            while number != 0:
+                number, i = divmod(number, len(alphabet))
+                base36 = alphabet[i] + base36
 
-            idx = valid.index(c)
+            return base36
 
-            if not rollover:
-                if idx >= N - 1:
-                    idx = 0
-                else:
-                    rollover = True
-                    idx += 1
-
-            output = valid[idx] + output
-
-        # If we get to the end of the sequence without incrementing, add a new character
-        if not rollover:
-            output = valid[0] + output
-        """
         # Iterate to next serial number
-        next_num = int(serial, base=16) + 1
-        output = hex(next_num)
-        output = output[2:]
+        next_num = int(serial, base=36) + 1
+        output = base36encode(next_num)
 
         # Validate
-        valid = self.valid_chars()
+        valid = valid_chars()
         invalid_flag = 0
-        valid_flag = 0
 
-        while ~valid_flag:
+        while 1:
             for c in output:
                 # if a char is not in the valid character list, it is not valid we need to go to the next serial number
                 if c not in valid:
                     invalid_flag = 1
 
             if invalid_flag == 1:
-                next_num = int(output, base=16) + 1
-                output = hex(next_num)
-                output = output[2:]
-                break
+                next_num = int(output, base=36) + 1
+                output = base36encode(next_num)
+                invalid_flag = 0
             else:
-
-                valid_flag = 1
-        return output.upper()
+                return output
 
 
 
